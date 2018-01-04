@@ -7,8 +7,11 @@
 #include <EmonLib.h>
 //#include <SoftwareSerial.h>
 EnergyMonitor emon1;
+Sensors sensors;
+
 #define emonTxV3
 #define SAMPLES_HOUR 5 //1 hora=720 de estos si el timer es de 5s
+#define MICRO_HOUR 1000000
 //SoftwareSerial mySerial2(11, 12); // RX, TX}
 SoftwareSerial serial(5, 6); //Rx, Tx
 MySIM800L gsm(11, 12);
@@ -31,9 +34,22 @@ void setup() {
   analogReference(EXTERNAL);
   pinMode(pinRel, OUTPUT);
   digitalWrite(pinRel, LOW);//Se activa en bajo el relevador
-  serial.begin(9600);
+  serial.begin(74880);
   delay(5000);
   serial.println("iniciando");
+  for(;;)
+  {
+
+    sensors.CT_Detect();//Detecta los sensores de corriente y el adaptador de ac-ac
+    if(sensors.acac)
+    {
+      serial.println("sensor conectado");
+      break;
+    }
+    else
+      serial.println("no hay sensor conectado");    
+  }
+  //
   /*for(;;)
   {
     serial.println("iniciando");
@@ -67,7 +83,8 @@ void setup() {
 
   serial.print("sensores configurados: ");
   settleSensors();//Necesario por el filtro
-  Timer1.initialize(5000000);         // initialize timer1, and set a 5 seconds period
+  Timer1.initialize(5*MICRO_HOUR);
+  //Timer1.initialize(5000000);         // initialize timer1, and set a 5 seconds period, originalmente esta función está en us
   Timer1.attachInterrupt(callback);  // attaches callback() as a timer overflow interrupt
  // mySim.connectGSM();
 }
@@ -131,8 +148,20 @@ delay(10);
 
 void callback()
 {
+    /*for(;;)
+    {
+  
+      sensors.CT_Detect();//Detecta los sensores de corriente y el adaptador de ac-ac
+      if(sensors.acac)
+        break;
+      
+      else
+        serial.println("no hay sensor conectado"); 
+      delay(10);   
+    }*/
     // put your main code here, to run repeatedly:
-  emon1.calcVI(30, 2000, &timeOutFlag);        // Calculate all. No.of wavelengths, time-out, originalmente 20 y 2000
+  emon1.calcVI(80, 2000, &timeOutFlag);        // Calculate all. No.of wavelengths, time-out, originalmente 20 y 2000
+  //En 35 muestras está probado funcionando oc
   //emon1.serialprint();           // Print out all variables
      count10sec++;
      if(timeOutFlag)
