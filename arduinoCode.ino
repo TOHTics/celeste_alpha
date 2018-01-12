@@ -1,23 +1,16 @@
-#include <LowPower.h>
-
-#include <MySIM800L.h>
+#include <SoftwareSerial.h>
+SoftwareSerial serial(5, 6); //Rx, Tx
 #include <QueueArray.h>
 #include <powerData.h>
 #include <TimerOne.h>
 #include <EmonLib.h>
-//#include <SoftwareSerial.h>
-EnergyMonitor emon1;
-Sensors sensors;
 
 #define emonTxV3
 #define SAMPLES_HOUR 5 //1 hora=720 de estos si el timer es de 5s
 #define MICRO_HOUR 1000000
-//SoftwareSerial mySerial2(11, 12); // RX, TX}
-SoftwareSerial serial(5, 6); //Rx, Tx
-MySIM800L gsm(11, 12);
-
+EnergyMonitor emon1;
+Sensors sensors;
 QueueArray<powerPackage> queue;//Datos no enviados
-//MySIM800L gsm(11, 12);
 
 int count10sec=0;
 float powerAcum=0;
@@ -27,16 +20,21 @@ float kwH=0;
 powerPackage currentPackage;
 const byte pinRel=  10;     
 bool timeOutFlag=false;
-//powerPackage currentPackage2;
-//int iTemp=0;
+
+
+char buf[3];
 void setup() {
-  // put your setup code here, to run once:
-  analogReference(EXTERNAL);
+    serial.begin(9600);//Debugear
+    Serial.begin(9600);//Conectado al rpi
+  delay(1000);
+  serial.println("Iniciando...");
+  startRpi();
+
+  analogReference(EXTERNAL);//Hay que cambiar la referencia porque origialmente funciona con 5v
   pinMode(pinRel, OUTPUT);
   digitalWrite(pinRel, LOW);//Se activa en bajo el relevador
-  serial.begin(74880);
-  delay(5000);
-  serial.println("iniciando");
+  delay(1000);
+  serial.println("iniciando módulos...");
   for(;;)
   {
 
@@ -49,54 +47,25 @@ void setup() {
     else
       serial.println("no hay sensor conectado");    
   }
-  //
-  /*for(;;)
-  {
-    serial.println("iniciando");
-    delay(200);    
-  }*/
-  
-  /*if(gsm.init(9600)) serial.println("Ready to use GSM");
-  if(gsm.signal()) serial.println("With Signal");
-  gsm.setAPN("internet.itelcel.com","webgprs", "webgprs2003");
-  if(gsm.connectGSM()) serial.println("GSM Ready");
-  if(gsm.connectHTTP()) serial.println("HTTP API Ready");
-  String data = createXML("4001", "40", "01-12-2017");
-  //serial.println(gsm.http_method("0","http://9869d310.ngrok.io/celeste/device/status","application/json",{"DeviceId": "4001"}));
-  serial.println(gsm.http_method("1","http://0d68a09a.ngrok.io","application/xml",data));//1 post
-*/
 
   emon1.current(CURRENT_PIN_1, 112);//Con 179  funciona bien, probar con 90.9
   emon1.voltage(VOLTAGE_PIN_1, 90.35, 1.7);  // Voltage: input pin, calibration, phase_shift
-  /*pinMode(A0, OUTPUT);
-  analogWrite(A0, 255);
-  
-  analogWrite(A0, 0);     // Pull input high low high then low to disburse any residual charge to avoid incorrectly detecting AC wave when not present
-  analogWrite(A0, 255);
-  analogWrite(A0, 0);     
-  analogWrite(A0, 255);
-  analogWrite(A0, 0);     
-  analogWrite(A0, 255);
-  analogWrite(A0, 0);     
-  pinMode(A0,INPUT);*/
+
   delay(500);             //allow things to settle
 
   serial.print("sensores configurados: ");
   settleSensors();//Necesario por el filtro
+  
   Timer1.initialize(5*MICRO_HOUR);
   //Timer1.initialize(5000000);         // initialize timer1, and set a 5 seconds period, originalmente esta función está en us
   Timer1.attachInterrupt(callback);  // attaches callback() as a timer overflow interrupt
- // mySim.connectGSM();
+
 }
 
-String createXML(String id, String potencia, String date)
-{
-  return "<SunSpecData v=\"1.0\">\n<d id=\""+id+"\" t=\""+date+"\">\n<m id=\"potenciometro\" x=\"1\">\n<p id=\"potencia\" t=\""+date+"\">"+potencia+"</p>\n</m>\n</d>\n</SunSpecData>";
-}
+void(* resetFunc) (void) = 0;//declare reset function at address 0
 
-void loop() 
-{
-  
+void loop() {
+
   if(count10sec==SAMPLES_HOUR)//1 hora=720 de estos si el timer es de 5s
   {
     Timer1.detachInterrupt();
@@ -122,7 +91,6 @@ void loop()
     {
       serial.print("Cola llena con ");
       serial.println(queue.count());
-
       
     }
 
@@ -139,22 +107,51 @@ void loop()
       //serial.println("Desencolando: ");
       //serial.println(currentPackage.kwH);
       //Intenta enviar
+    }  
+
+  
+//Serial.println("pot,156.9,");
+
+    if(Serial.available()>0)//Lega un dato
+    {
+      buf[0]=Serial.read();
+      if(buf[0]=='$')//Resetear
+      {
+        serial.println("El micro se reiniciará");
+        resetFunc();
+      }
+      if (buf[0]=='&')
+      {
+        
+        buf[1]=Serial.read();
+        serial.println("cambiar de estado");
+        serial.println("llegó: "+buf[1]);
+        if(buf[1]=='1')//Encendido
+        {
+          serial.println("Encender");
+          digitalWrite(pinRel, LOW);
+        }
+        if(buf[1]=='0')
+        {
+          serial.println("Apagar");
+          digitalWrite(pinRel, HIGH);
+        }
+        
+      }
       
     }
+
+  delay(1);
   
- // LowPower.powerDown(SLEEP_2S, ADC_OFF, BOD_OFF);
-delay(10);
 }
 
 void callback()
 {
     /*for(;;)
     {
-  
       sensors.CT_Detect();//Detecta los sensores de corriente y el adaptador de ac-ac
       if(sensors.acac)
-        break;
-      
+        break; 
       else
         serial.println("no hay sensor conectado"); 
       delay(10);   
@@ -176,6 +173,7 @@ void callback()
    serial.println("Irms= ");
    serial.println(emon1.Irms);
    powerAcum+=emon1.realPower;
+   Serial.println("pot,"+String(emon1.realPower)+",");
    //powerAcum+=10.5+iTemp;
    //iTemp++;
 }
@@ -186,8 +184,33 @@ void settleSensors()
   for(int i=0; i<25; i++)
   {
     //serial.print("leyendo...");
-    emon1.calcVI(25, 2000, &timeOutFlag);        
+    emon1.calcVI(20, 2000, &timeOutFlag);        
   }
-  serial.print("filtro establecido: ");
+  serial.println("filtro establecido: ");
+}
+
+void startRpi()
+{
+
+  for(;;)
+  {
+    Serial.println("ok");
+    //Serial.println("enviando ocs ");
+    //int temp=serial.available();
+    //Serial(String(temp));
+    if(Serial.available()>0)
+    {
+      serial.println("if");
+      buf[0]=Serial.read();
+      buf[1]=Serial.read();
+      if(buf[0]=='o' && buf[1]=='k')
+      {
+        serial.println("rpi listo!");//Arduino y rpi sincronizados
+        break;
+      } 
+    }
+    delay(100);
+  }
+  
 }
 
