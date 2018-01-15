@@ -1,0 +1,9 @@
+[submodule "dependency/TimerOne-r11"]
+	path = dependency/TimerOne-r11
+	url = https://github.com/poipoi/TimerOne-r11
+[submodule "dependency/QueueArray"]
+	path = dependency/QueueArray
+	url = https://github.com/interactive-matter/QueueArray
+[submodule "dependency/EmonLib"]
+	path = dependency/EmonLib
+	url = https://github.com/openenergymonitor/EmonLib
