@@ -1,0 +1,9 @@
+[submodule "arduino/libraries/TimerOne-r11"]
+	path = arduino/libraries/TimerOne-r11
+	url = https://github.com/poipoi/TimerOne-r11
+[submodule "arduino/libraries/QueueArray"]
+	path = arduino/libraries/QueueArray
+	url = https://github.com/interactive-matter/QueueArray
+[submodule "arduino/libraries/EmonLib"]
+	path = arduino/libraries/EmonLib
+	url = https://github.com/openenergymonitor/EmonLib
