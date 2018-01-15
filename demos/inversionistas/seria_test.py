@@ -1,4 +1,15 @@
 #/usr/local/bin/python
+import serial
+from serial import SerialException
+import os
+import time
+import subprocess
+import requests
+import datetime
+import random
+import sys
+
+
 idDevice=sys.argv[1]
 
 if idDevice =="666":#Resetear
