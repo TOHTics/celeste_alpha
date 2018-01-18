@@ -21,7 +21,10 @@ if __name__ == "__main__":
             if myArduinoCom.getPower()==True:#dato valido
                 consumption=myArduinoCom.power
                 myHttpCom.sendPower(consumption)
+                t1=time.clock()
                 if myHttpCom.getStatusRelay()==True:#status valido -> le contesta al arduino
+                    t2=time.clock()
+                    print "t2-t1 del get", t2-t1
                     myArduinoCom.sendStatus(myHttpCom.status)
                 else:
                     print "informacion devuelta por  el servidor incorrecta"
