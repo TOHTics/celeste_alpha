@@ -5,10 +5,10 @@ import time
 class Package2Send:
     def __init__(self, idDevice_):
         urlNg="e52254fc"
-        self.urlPost='http://'+urlNg+'.ngrok.io/celeste/logger/upload/verbose'
-        #self.urlPost='http://192.168.100.115:10000/celeste/logger/upload/verbose'
-        self.urlGet='http://'+urlNg+'.ngrok.io/celeste/device/status/arduino'
-        #self.urlGet='http://192.168.100.115:10000/celeste/device/status/arduino'
+        #self.urlPost='http://'+urlNg+'.ngrok.io/celeste/logger/upload/verbose'
+        self.urlPost='http://work.tohtics.com:9001/celeste/logger/upload/verbose'
+        #self.urlGet='http://'+urlNg+'.ngrok.io/celeste/device/status/arduino'
+        self.urlGet='http://work.tohtics.com:9001/celeste/device/status/arduino'
         self.idDevice=idDevice_
         self.headers={'Content-Type': 'application/xml'}
         self.payloadPost=""
@@ -39,7 +39,7 @@ class Package2Send:
         print 'get tarda: ', t2-t1
         self.status=r.content
         print 'Response get: ', r.content
-        self.status="1"
+        #self.status="1"
         if self.status=="0" or self.status=="1":
             return True
         else:
